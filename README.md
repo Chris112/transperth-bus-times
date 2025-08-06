@@ -163,6 +163,7 @@ Common Perth stop codes:
 - **Transperth Website:** [transperth.wa.gov.au](https://www.transperth.wa.gov.au)
 - **Home Assistant Services:** [home-assistant.io/docs/scripts/service-calls](https://www.home-assistant.io/docs/scripts/service-calls/)
 - **HACS Documentation:** [hacs.xyz](https://hacs.xyz/)
+- **API Documentation:** [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) - Details on the Transperth API endpoints
 
 ## 🔧 For Developers
 
