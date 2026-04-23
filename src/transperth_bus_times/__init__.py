@@ -352,13 +352,11 @@ fields:
     bus_number:
         description: Optional bus route filter (e.g. 414). If omitted, returns the very next bus regardless of route.
         example: "414"
-        required: false
         selector:
             text:
     at:
         description: Reference time to search from. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
@@ -442,7 +440,6 @@ fields:
     walk_minutes:
         description: How long it takes to walk to the stop (minutes)
         example: 5
-        required: false
         default: 0
         selector:
             number:
@@ -451,7 +448,6 @@ fields:
     at:
         description: Reference time to search from. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
@@ -513,7 +509,6 @@ fields:
     at:
         description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
@@ -546,7 +541,6 @@ fields:
     count:
         description: How many upcoming buses to return (1-20)
         example: 5
-        required: false
         default: 5
         selector:
             number:
@@ -555,7 +549,6 @@ fields:
     at:
         description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
@@ -634,7 +627,6 @@ fields:
     at:
         description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
@@ -709,7 +701,6 @@ fields:
     direction:
         description: Direction for the trip
         example: "both"
-        required: false
         default: "both"
         selector:
             select:
@@ -720,7 +711,6 @@ fields:
     at:
         description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
         example: "08:00"
-        required: false
         selector:
             text:
     """
