@@ -1,15 +1,5 @@
-# Development dependencies
--r requirements.txt
-
-# Testing
+# Dependencies for running the API contract tests.
+# The service itself runs inside PyScript (which supplies its own requests).
+requests>=2.28.0
 pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-asyncio>=0.21.0
-
-# Code quality
-black>=23.0.0
-ruff>=0.1.0
-
-# Type checking (optional)
-mypy>=1.0.0
-types-requests>=2.28.0
+pytest-xdist>=3.0.0  # parallel test execution

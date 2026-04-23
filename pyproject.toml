@@ -1,54 +1,14 @@
 [project]
 name = "transperth-bus-times"
-version = "1.0.0"
+version = "2.0.0"
 description = "Home Assistant PyScript integration for Transperth bus times"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = [
-    "requests>=2.28.0",
-]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
-]
-
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-packages = ["transperth_bus_times"]
+# This project isn't installed as a package — the single source file is copied
+# into PyScript. The test suite is the only reason Python tooling is configured.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
-
-[tool.black]
-line-length = 100
-target-version = ['py39']
-
-[tool.ruff]
-line-length = 100
-target-version = "py39"
-
-[tool.ruff.lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-]
-ignore = [
-    "E501",  # line too long (handled by black)
-    "F821",  # undefined names (for PyScript globals: task, log, service)
-]
-
-[tool.ruff.lint.per-file-ignores]
-"src/transperth_bus_times/__init__.py" = ["F821"]  # PyScript globals

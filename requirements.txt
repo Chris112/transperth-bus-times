@@ -1,8 +1,0 @@
-# Core dependencies
-requests>=2.28.0
-
-# Development dependencies (optional - install with pip install -r requirements-dev.txt)
-# pytest>=7.0.0
-# pytest-cov>=4.0.0
-# black>=23.0.0
-# ruff>=0.1.0

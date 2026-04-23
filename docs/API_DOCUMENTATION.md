@@ -1,285 +1,57 @@
-# Transperth Bus API Documentation
+# Transperth API — Overview
 
-This document describes the undocumented Transperth API endpoints used to fetch real-time bus data. These are the same endpoints the official Transperth website uses.
+This project calls Transperth's public website API (the same endpoints the Transperth site uses in the browser). These aren't officially documented — we reverse-engineered them from network traces.
 
-## Overview
+For full request/response details see **[API_REFERENCE.md](API_REFERENCE.md)**.
 
-The Transperth bus system uses a SilverRail API backend. To access it, you need:
-1. A session cookie from the website
-2. A CSRF token extracted from the HTML
-3. Specific headers including ModuleId and TabId
+## What we actually use
 
-## Authentication Flow
+Three endpoints power all six services:
 
-### Step 1: Get Session and Token
+| Endpoint | Used by |
+|----------|---------|
+| `GetStopTimetableAsync` | `get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule_today` |
+| `GetTimetableOptionsAsync` | `get_bus_stops` (to find the next upcoming trip) |
+| `GetTimetableTripAsync` | `get_bus_stops` (to get the full stop list for that trip) |
 
-**Request:**
-```
-GET https://www.transperth.wa.gov.au/timetables/details?Bus={bus_number}
-```
+Most services make **one** API call per invocation (plus one auth page fetch). `get_bus_stops` makes two.
 
-**Example:**
-```bash
-curl 'https://www.transperth.wa.gov.au/timetables/details?Bus=209'
-```
+## Authentication
 
-**What to extract from HTML response:**
-Look for this hidden input field in the HTML:
-```html
-<input name="__RequestVerificationToken" type="hidden" value="CfDJ8NWxs...long_token_here..." />
-```
+Every API call needs a CSRF token. Tokens are **scoped to the page that issued them**:
 
-You'll also get session cookies that need to be maintained for subsequent requests.
+| Auth context | Page to fetch | Used for |
+|--------------|---------------|----------|
+| Route | `/timetables/details?Bus={n}` | `GetTimetableOptionsAsync`, `GetTimetableTripAsync` |
+| Stop | `/Journey-Planner/Stops-Near-You?locationtype=stop&location={code}` | `GetStopTimetableAsync` |
 
-## API Endpoints
+Using the wrong token returns HTTP 401. The two contexts also use different `ModuleId` and `TabId` header values. See API_REFERENCE.md for the exact headers.
 
-### 1. GetTimetableOptions - Get Bus Departures
+## Rate limiting
 
-Gets the next departures for a specific bus route.
+Transperth returns **HTTP 429 Too Many Requests** (plain text, not JSON) when rate-limited. Key behaviours:
 
-**Endpoint:**
-```
-POST https://www.transperth.wa.gov.au/API/SilverRailRestService/SilverRailService/GetTimetableOptions
-```
+- Triggered by rapid successive API calls (e.g. looping through many trips)
+- No `Retry-After` header
+- Cooldown is sticky — observed >60 seconds
+- Once limited, **every** subsequent request is blocked until the window clears
+- Affects the Transperth website too — if you hit it, browsing transperth.wa.gov.au shows "Uh-oh, something broke"
 
-**Required Headers:**
-```
-RequestVerificationToken: {token_from_html}
-ModuleId: 5345
-TabId: 133
-Content-Type: application/x-www-form-urlencoded
-X-Requested-With: XMLHttpRequest
-```
+Our service detects 429s and returns `rate_limited: true` in its error response. Under normal automation use we don't hit it — each service call makes only 1–2 HTTP requests.
 
-**Request Body (form-encoded):**
-```
-ExactlyMatchedRouteOnly=true
-Mode=bus
-Route=209
-QryDate=2025-01-06
-QryTime=14:30
-MaxOptions=5
-```
+## Data shape
 
-**Parameters:**
-- `Route`: Bus number (e.g., "209", "950")
-- `QryDate`: Date in YYYY-MM-DD format
-- `QryTime`: Time in HH:MM format (24-hour)
-- `MaxOptions`: How many departures to return (1-10 typically)
+- Scheduled times only (not real-time vehicle position)
+- Stop codes match the physical signage
+- No fare info, no service alerts, no historical data in the responses
 
-**Example Response:**
-```json
-{
-  "result": "success",
-  "data": {
-    "Direction": "0",
-    "Options": [
-      {
-        "TripKey": "BUS:209:1:14:45:MON-FRI",
-        "RouteUid": "BUS:209",
-        "StartTime": "14:45",
-        "FinishTime": "15:23",
-        "StartLocation": "Mirrabooka Bus Stn",
-        "FinishLocation": "Warwick Stn",
-        "Duration": 38,
-        "RouteNumber": "209",
-        "ServiceName": "209"
-      }
-    ]
-  }
-}
-```
+## Known limitations
 
-**Response Fields:**
-- `Direction`: "0" for outbound, "1" for inbound
-- `TripKey`: Unique identifier for this specific trip
-- `RouteUid`: Route identifier
-- `StartTime`: Departure time from first stop
-- `FinishTime`: Arrival time at last stop
-- `StartLocation`: First stop name
-- `FinishLocation`: Last stop name
-- `Duration`: Journey time in minutes
+1. No real-time delay information — only scheduled times
+2. No fare information
+3. No service alerts / disruptions (may live in `GetTripInfoAsync`, not yet explored)
+4. No historical data
 
-### 2. GetTimetableTrip - Get Full Journey Details
+## Legal note
 
-Gets all stops and times for a specific bus trip.
-
-**Endpoint:**
-```
-POST https://www.transperth.wa.gov.au/API/SilverRailRestService/SilverRailService/GetTimetableTrip
-```
-
-**Required Headers:**
-Same as GetTimetableOptions
-
-**Request Body (form-encoded):**
-```
-RouteUid=BUS:209
-TripUid=BUS:209:1:14:45:MON-FRI
-TripDate=2025-01-06
-TripDirection=outbound
-ReturnNoteCodes=DV,LM,CM,TC,BG,FG,LK
-```
-
-**Parameters:**
-- `RouteUid`: From GetTimetableOptions response
-- `TripUid`: The TripKey from GetTimetableOptions
-- `TripDate`: Date in YYYY-MM-DD format
-- `TripDirection`: "inbound" or "outbound" (critical - wrong value returns empty data!)
-- `ReturnNoteCodes`: Comma-separated note codes (optional)
-
-**Example Response:**
-```json
-{
-  "result": "success",
-  "data": {
-    "Headsign": "209 to Warwick Stn",
-    "Direction": "outbound",
-    "TripStopTimings": [
-      {
-        "Stop": {
-          "Code": "21940",
-          "Description": "Mirrabooka Bus Stn Platform 4",
-          "Zone": "2",
-          "Latitude": -31.863889,
-          "Longitude": 115.863056
-        },
-        "ArrivalTime": null,
-        "DepartTime": "14:45",
-        "CanBoard": true,
-        "CanAlight": false,
-        "IsTimingPoint": true
-      },
-      {
-        "Stop": {
-          "Code": "10858",
-          "Description": "Reid Hwy After Mirrabooka Av",
-          "Zone": "2",
-          "Latitude": -31.860278,
-          "Longitude": 115.862778
-        },
-        "ArrivalTime": "14:47",
-        "DepartTime": "14:47",
-        "CanBoard": true,
-        "CanAlight": true,
-        "IsTimingPoint": false
-      }
-    ]
-  }
-}
-```
-
-**Response Fields:**
-- `Headsign`: What's displayed on the front of the bus
-- `Direction`: Travel direction
-- `TripStopTimings`: Array of all stops
-  - `Stop.Code`: Unique stop identifier (what's on the stop sign)
-  - `Stop.Description`: Full stop name
-  - `Stop.Zone`: Fare zone (1-9)
-  - `Stop.Latitude/Longitude`: GPS coordinates
-  - `ArrivalTime`: When bus arrives (null for first stop)
-  - `DepartTime`: When bus departs (null for last stop)
-  - `CanBoard`: Can passengers get on here?
-  - `CanAlight`: Can passengers get off here?
-  - `IsTimingPoint`: Does bus wait here if early?
-
-## Important Notes
-
-### Direction Parameter
-The `TripDirection` parameter is **critical**. If you use the wrong direction, the API returns `{"result": "success", "data": null}`. 
-
-Common values:
-- Outbound: "outbound", "0"
-- Inbound: "inbound", "1"
-
-The API can be inconsistent - sometimes the GetTimetableOptions says Direction="0" but you need to use "inbound" for GetTimetableTrip to work. When in doubt, try both.
-
-### Authentication Tokens
-- Tokens expire after some time (appears to be session-based)
-- Each token is tied to a session cookie
-- You need to maintain cookies between requests
-
-### Rate Limiting
-No obvious rate limiting, but be respectful - this is Transperth's production API.
-
-### Error Responses
-
-**Invalid token or expired session:**
-```json
-{
-  "result": "error",
-  "message": "Unauthorized"
-}
-```
-
-**Invalid bus number:**
-```json
-{
-  "result": "success",
-  "data": {
-    "Options": []
-  }
-}
-```
-
-**Wrong direction (common issue):**
-```json
-{
-  "result": "success",
-  "data": null
-}
-```
-
-## Example Python Implementation
-
-```python
-import requests
-import re
-from datetime import datetime
-
-# Step 1: Get session and token
-session = requests.Session()
-auth_response = session.get('https://www.transperth.wa.gov.au/timetables/details?Bus=209')
-
-# Extract token from HTML
-token_match = re.search(r'<input\s+name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"', auth_response.text)
-token = token_match.group(1)
-
-# Step 2: Get bus times
-headers = {
-    'RequestVerificationToken': token,
-    'ModuleId': '5345',
-    'TabId': '133',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'X-Requested-With': 'XMLHttpRequest'
-}
-
-data = {
-    'ExactlyMatchedRouteOnly': 'true',
-    'Mode': 'bus',
-    'Route': '209',
-    'QryDate': datetime.now().strftime('%Y-%m-%d'),
-    'QryTime': datetime.now().strftime('%H:%M'),
-    'MaxOptions': '1'
-}
-
-response = session.post(
-    'https://www.transperth.wa.gov.au/API/SilverRailRestService/SilverRailService/GetTimetableOptions',
-    headers=headers,
-    data=data
-)
-
-print(response.json())
-```
-
-## Discovered Limitations
-
-1. No real-time delay information - only scheduled times
-2. No accessibility information beyond basic boarding/alighting
-3. No fare information in the API
-4. No service alerts or disruptions
-5. Historical data not available
-
-## Legal Note
-
-This API is not officially documented or supported by Transperth. Use at your own risk and be respectful of their infrastructure.
+This API is not officially documented or supported by Transperth. Use at your own risk and be respectful of their infrastructure — this tool makes one or two HTTP requests per service call and is not designed for polling.
