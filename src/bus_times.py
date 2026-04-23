@@ -6,7 +6,6 @@
 # INSTALLATION:
 # 1. Install PyScript via HACS
 # 2. Place this file at: config/pyscript/bus_times.py
-# 3. Reload PyScript or restart Home Assistant
 #
 # SERVICES PROVIDED:
 # - pyscript.get_next_bus             - Next bus at a stop (optionally filter by route)
