@@ -388,7 +388,7 @@ fields:
                 "stop_name": (stop_info or {}).get("Description", ""),
                 "bus_number": parsed["route_code"],
                 "departure_time": parsed["depart_time"],
-                "minutes_until": minutes_until_iso(parsed["depart_iso"], ref),
+                "minutes_until": minutes_until_iso(parsed["depart_iso"], datetime.now()),
                 "headsign": parsed["headsign"],
                 "destination": parsed["destination_name"],
                 "reference_time": ref.isoformat(),
@@ -579,7 +579,7 @@ fields:
             departures.append({
                 "bus_number": parsed["route_code"],
                 "departure_time": parsed["depart_time"],
-                "minutes_until": minutes_until_iso(parsed["depart_iso"], ref),
+                "minutes_until": minutes_until_iso(parsed["depart_iso"], datetime.now()),
                 "headsign": parsed["headsign"],
                 "destination": parsed["destination_name"],
             })
@@ -656,7 +656,7 @@ fields:
                 continue
             times.append({
                 "departure_time": parsed["depart_time"],
-                "minutes_until": minutes_until_iso(parsed["depart_iso"], ref),
+                "minutes_until": minutes_until_iso(parsed["depart_iso"], datetime.now()),
                 "headsign": parsed["headsign"],
                 "destination": parsed["destination_name"],
             })
