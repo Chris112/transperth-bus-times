@@ -121,11 +121,11 @@ data:
 
 **Returns:** `departures[]` with `bus_number`, `departure_time`, `minutes_until`, `headsign`, `destination`
 
-### `pyscript.get_bus_schedule_today`
-Every remaining time a bus stops at a stop today.
+### `pyscript.get_bus_schedule`
+All upcoming times a bus stops at a stop. Defaults to now; pass `at` to query another time.
 
 ```yaml
-service: pyscript.get_bus_schedule_today
+service: pyscript.get_bus_schedule
 data:
   bus_number: "414"
   stop_code: "12627"
@@ -269,7 +269,7 @@ See [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) for the overview or [
 
 ## 📝 Version History
 
-- **2.0.0** — Rewrite: 6 user-friendly services (`get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule_today`, `get_bus_stops`), switched to stop-centric API, added `at` parameter for looking ahead, fixed silent 429 failure mode
+- **2.0.0** — Rewrite: 6 user-friendly services (`get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule`, `get_bus_stops`), switched to stop-centric API, added `at` parameter for looking ahead, fixed silent 429 failure mode
 - **1.0.0** — Initial release with two main services and health check
 
 ## ⚖️ Disclaimer

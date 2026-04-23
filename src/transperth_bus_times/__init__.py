@@ -13,7 +13,7 @@
 # - pyscript.get_leave_time           - "Is it time to leave?" for a specific bus and stop
 # - pyscript.get_bus_countdown        - Integer minutes until next bus (sensor-friendly)
 # - pyscript.get_stop_departures      - Next N buses at a stop (any route)
-# - pyscript.get_bus_schedule_today   - All remaining times a bus stops at a stop today
+# - pyscript.get_bus_schedule   - All upcoming times a bus stops at a stop (from 'at' onward)
 # - pyscript.get_bus_stops            - All stops on a bus's next upcoming trip
 # - pyscript.bus_times_health_check   - Check the integration is working
 #
@@ -611,13 +611,13 @@ fields:
 
 
 ####################################################################################################
-# SERVICE: get_bus_schedule_today
+# SERVICE: get_bus_schedule
 ####################################################################################################
 @service(supports_response="only")
-def get_bus_schedule_today(bus_number, stop_code, at=None, return_response=True):
+def get_bus_schedule(bus_number, stop_code, at=None, return_response=True):
     """yaml
-name: Get Bus Schedule Today
-description: All remaining times the given bus stops at the given stop (from reference time onward)
+name: Get Bus Schedule
+description: All upcoming times the given bus stops at the given stop (from the reference time onward). Use `at` to query a different date/time.
 fields:
     bus_number:
         description: Bus route number
@@ -687,7 +687,7 @@ fields:
     except AuthError as e:
         return error_dict(f"Authentication failed: {e}")
     except Exception as e:
-        log.error(f"get_bus_schedule_today error: {e}")
+        log.error(f"get_bus_schedule error: {e}")
         return error_dict(str(e))
 
 

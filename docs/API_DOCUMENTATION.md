@@ -10,7 +10,7 @@ Three endpoints power all six services:
 
 | Endpoint | Used by |
 |----------|---------|
-| `GetStopTimetableAsync` | `get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule_today` |
+| `GetStopTimetableAsync` | `get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule` |
 | `GetTimetableOptionsAsync` | `get_bus_stops` (to find the next upcoming trip) |
 | `GetTimetableTripAsync` | `get_bus_stops` (to get the full stop list for that trip) |
 
