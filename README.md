@@ -66,9 +66,11 @@ You should see the next upcoming bus at that stop.
 ### Common parameters and response fields
 
 All services below support an optional **`at`** parameter for testing or planning ahead:
-- `"HH:MM"` — today at that time (e.g. `"08:00"`)
-- `"YYYY-MM-DD HH:MM"` — any specific moment
+- `"HH:MM"` — the **next** occurrence of that time (today if still upcoming, tomorrow if already past)
+- `"YYYY-MM-DD HH:MM"` — any specific moment (no rollover)
 - Omit to use the current time
+
+Example: at 9pm tonight, `at: "08:00"` returns tomorrow morning's buses — perfect for setting up the kids' alarm automation the night before. If you need to look at this morning's 8am schedule instead, pass the full date.
 
 All successful responses include `result: "success"` plus a `timestamp`. Errors return `result: "error"` with an `error` message, and rate-limit errors include `rate_limited: true`.
 

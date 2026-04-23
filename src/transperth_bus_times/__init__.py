@@ -36,7 +36,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 ####################################################################################################
@@ -302,9 +302,14 @@ def resolve_reference_time(at):
 
     Accepts:
         None / empty -> datetime.now()
-        "HH:MM"      -> today at that time
-        "YYYY-MM-DD HH:MM" or "YYYY-MM-DDTHH:MM" -> exact moment
+        "HH:MM"      -> next occurrence of that time (today if still upcoming, else tomorrow)
+        "YYYY-MM-DD HH:MM" or "YYYY-MM-DDTHH:MM" -> exact moment (no rollover)
     Returns the resolved datetime, or raises ValueError.
+
+    The HH:MM form rolls to tomorrow when the time has already passed today, so
+    setting "08:00" at 9pm returns tomorrow morning 8am — what you'd want for
+    morning automations set up the night before. For literal same-day past times
+    (e.g. to debug what happened at 8am), use the explicit YYYY-MM-DD HH:MM form.
     """
     if not at:
         return datetime.now()
@@ -315,13 +320,16 @@ def resolve_reference_time(at):
         except ValueError:
             continue
         if fmt == "%H:%M":
-            today = datetime.now()
-            return today.replace(
+            now = datetime.now()
+            candidate = now.replace(
                 hour=parsed.hour, minute=parsed.minute, second=0, microsecond=0
             )
+            if candidate < now:
+                candidate += timedelta(days=1)
+            return candidate
         return parsed
     raise ValueError(
-        f"Invalid time '{at}'. Use 'HH:MM' for today or 'YYYY-MM-DD HH:MM' for a specific moment."
+        f"Invalid time '{at}'. Use 'HH:MM' for today/tomorrow or 'YYYY-MM-DD HH:MM' for a specific moment."
     )
 
 
@@ -358,7 +366,7 @@ fields:
         selector:
             text:
     at:
-        description: Reference time to search from. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time to search from. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
@@ -449,7 +457,7 @@ fields:
                 min: 0
                 max: 60
     at:
-        description: Reference time to search from. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time to search from. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
@@ -510,7 +518,7 @@ fields:
         selector:
             text:
     at:
-        description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
@@ -549,7 +557,7 @@ fields:
                 min: 1
                 max: 20
     at:
-        description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
@@ -627,7 +635,7 @@ fields:
         selector:
             text:
     at:
-        description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
@@ -711,7 +719,7 @@ fields:
                   - inbound
                   - outbound
     at:
-        description: Reference time. Accepts 'HH:MM' (today) or 'YYYY-MM-DD HH:MM'. Defaults to now.
+        description: Reference time. 'HH:MM' rolls to tomorrow if past; 'YYYY-MM-DD HH:MM' for an exact moment. Defaults to now.
         example: "08:00"
         selector:
             text:
