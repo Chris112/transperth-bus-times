@@ -284,14 +284,17 @@ def _iso_to_hhmm(iso_string):
 
 
 def minutes_until_iso(iso_string, now):
-    """Return integer minutes from `now` until `iso_string` timestamp. Negative if past."""
+    """Return integer minutes from `now` until `iso_string`.
+    Returns -1 as a sentinel if the string is empty/invalid OR if the target is in the past.
+    """
     if not iso_string:
-        return None
+        return -1
     try:
         target = datetime.strptime(iso_string[:16], "%Y-%m-%dT%H:%M")
     except ValueError:
-        return None
-    return int((target - now).total_seconds() // 60)
+        return -1
+    minutes = int((target - now).total_seconds() // 60)
+    return minutes if minutes >= 0 else -1
 
 
 def resolve_reference_time(at):
@@ -516,8 +519,7 @@ fields:
         next_bus = get_next_bus(stop_code=stop_code, bus_number=bus_number, at=at, return_response=True)
         if next_bus.get("result") != "success":
             return {"result": "error", "minutes": -1, "error": next_bus.get("error", "unknown error")}
-        minutes = next_bus.get("minutes_until")
-        return {"result": "success", "minutes": minutes if minutes is not None else -1}
+        return {"result": "success", "minutes": next_bus.get("minutes_until", -1)}
     except Exception as e:
         log.error(f"get_bus_countdown error: {e}")
         return {"result": "error", "minutes": -1, "error": str(e)}
