@@ -1,72 +1,92 @@
-# 🚌 Transperth Bus Times for Home Assistant
+# Transperth Bus Times for Home Assistant
 
-Perth public transport timetables in your Home Assistant dashboard. Get scheduled bus departure times, stop information, and journey details from Transperth directly in your smart home — perfect for "time to leave for the bus" automations.
+Live Perth bus departure times exposed as Home Assistant services. Built for "time to leave" automations, dashboard countdowns, and morning commute notifications.
 
-## 🚀 Getting Started
+This is a single-file PyScript service. If you've never used PyScript before, that's fine — the install walkthrough below covers it from scratch.
 
-### Prerequisites
-- Home Assistant with HACS installed
+## What you get
 
-### Step 1: Install PyScript via HACS
+Seven services you can call from any automation, script, or dashboard:
 
-1. Open HACS in your Home Assistant
-2. Click **Integrations** → **Explore & Download Repositories**
-3. Search for **"PyScript"**
-4. Click **Download** → **Download** (use latest version)
-5. Restart Home Assistant
-6. Go to **Settings** → **Devices & Services** → **Add Integration**
-7. Search for **"PyScript"** and click it
-8. Click **Submit** (keep "Allow all imports" checked)
+| Service | Purpose |
+|---------|---------|
+| `pyscript.get_next_bus` | The next bus at a stop, optionally filtered by route |
+| `pyscript.get_leave_time` | Should I leave now? Accounts for walk time |
+| `pyscript.get_bus_countdown` | Minutes until next bus as an integer — for template sensors |
+| `pyscript.get_stop_departures` | Next N buses at a stop, across all routes |
+| `pyscript.get_bus_schedule` | All upcoming times a specific bus stops at a stop |
+| `pyscript.get_bus_stops` | All stops on a bus's next trip, with GPS coordinates |
+| `pyscript.bus_times_health_check` | Verifies the integration can reach Transperth |
 
-### Step 2: Install the Bus Times Service
+Full reference and examples for each are in [Service reference](#service-reference) below.
 
-1. Download `src/bus_times.py` from this repository.
+## Install
 
-2. Drop it at `config/pyscript/bus_times.py` in your Home Assistant config:
+### 1. Install PyScript via HACS
+
+PyScript lets you run Python files inside Home Assistant. You need it installed before this integration will work.
+
+1. Open HACS in Home Assistant.
+2. **Integrations** → **Explore & Download Repositories**.
+3. Search for **PyScript**, click **Download** (latest version).
+4. Restart Home Assistant.
+5. **Settings** → **Devices & Services** → **Add Integration**.
+6. Search for **PyScript**, click it, leave **Allow all imports** checked, click **Submit**.
+
+### 2. Add the bus times file
+
+1. Download [`src/bus_times.py`](src/bus_times.py) from this repo.
+2. Place it at `config/pyscript/bus_times.py` in your Home Assistant config directory:
+
    ```
    config/
    └── pyscript/
        └── bus_times.py
    ```
 
-### Step 3: Test It Works
+3. Reload PyScript: **Developer Tools** → **Services** → call `pyscript.reload`.
 
-1. Go to **Developer Tools** → **Services**
-2. Search for `pyscript.bus_times_health_check` and click **Call Service**. You should see `result: "success"` with all four `*_working` flags `true`.
-3. For a real query, try `pyscript.get_next_bus` with:
-   ```yaml
-   stop_code: "12627"    # Main St After Lawley St — route 414 stops here
-   bus_number: "414"
-   ```
-   You should see the next upcoming 414 at that stop.
+### 3. Verify
 
+In **Developer Tools** → **Services**, call `pyscript.bus_times_health_check`. A healthy install returns:
 
-## 📖 Available Services
+```yaml
+result: success
+route_auth_working: true
+stop_auth_working: true
+options_api_working: true
+stop_timetable_api_working: true
+```
 
-Six services covering countdown sensors, "time to leave" decisions, stop departure boards, and full route listings. Plus a health check.
+Then try a real query — `pyscript.get_next_bus` with `stop_code: "12627"` and `bus_number: "414"` should return the next 414.
 
-### Common parameters and response fields
+## Service reference
 
-All services below support an optional **`at`** parameter for testing or planning ahead:
-- `"HH:MM"` — the **next** occurrence of that time (today if still upcoming, tomorrow if already past)
-- `"YYYY-MM-DD HH:MM"` — any specific moment (no rollover)
-- Omit to use the current time
+All services return a dict with `result: success` or `result: error`. Successful responses include a `timestamp`. Errors include an `error` message; rate-limit errors also include `rate_limited: true`.
 
-All successful responses include `result: "success"` plus a `timestamp`. Errors return `result: "error"` with an `error` message, and rate-limit errors include `rate_limited: true`.
+### Common: the `at` parameter
+
+Every service accepts an optional `at` for testing or planning ahead:
+
+- `"HH:MM"` — the **next** occurrence of that time (today if upcoming, tomorrow if past).
+- `"YYYY-MM-DD HH:MM"` — any specific moment, no rollover.
+- Omit it to use the current time.
 
 ### `pyscript.get_next_bus`
+
 The next bus at a stop, optionally filtered by route.
 
 ```yaml
 service: pyscript.get_next_bus
 data:
   stop_code: "12627"
-  bus_number: "414"   # optional - omit for the very next bus, any route
+  bus_number: "414"   # optional — omit for any next bus
 ```
 
-**Returns:** `departure_time`, `minutes_until`, `bus_number`, `headsign`, `destination`
+Returns: `departure_time`, `minutes_until`, `bus_number`, `headsign`, `destination`.
 
 ### `pyscript.get_leave_time`
+
 Is it time to leave for the bus? Accounts for walk time to the stop.
 
 ```yaml
@@ -77,9 +97,10 @@ data:
   walk_minutes: 5
 ```
 
-**Returns:** `is_time_to_leave` (bool), `minutes_until_leave`, `minutes_until_bus`, `departure_time`
+Returns: `is_time_to_leave` (bool), `minutes_until_leave`, `minutes_until_bus`, `departure_time`.
 
 ### `pyscript.get_bus_countdown`
+
 Integer minutes until the next specified bus. Designed for template sensors.
 
 ```yaml
@@ -89,9 +110,10 @@ data:
   bus_number: "414"
 ```
 
-**Returns:** `{ "result": "success", "minutes": 12 }` — returns `minutes: -1` when no bus is coming.
+Returns: `minutes` — an integer, or `-1` when no bus is coming.
 
 ### `pyscript.get_stop_departures`
+
 Next N buses at a stop, across all routes.
 
 ```yaml
@@ -101,10 +123,11 @@ data:
   count: 5   # optional, default 5, max 20
 ```
 
-**Returns:** `departures[]` with `bus_number`, `departure_time`, `minutes_until`, `headsign`, `destination`
+Returns: `departures[]` with `bus_number`, `departure_time`, `minutes_until`, `headsign`, `destination`.
 
 ### `pyscript.get_bus_schedule`
-All upcoming times a bus stops at a stop. Defaults to now; pass `at` to query another time.
+
+All upcoming times a specific bus stops at a stop.
 
 ```yaml
 service: pyscript.get_bus_schedule
@@ -113,9 +136,10 @@ data:
   stop_code: "12627"
 ```
 
-**Returns:** `times[]` with `departure_time`, `minutes_until`, `headsign`, `destination`
+Returns: `times[]` with `departure_time`, `minutes_until`, `headsign`, `destination`.
 
 ### `pyscript.get_bus_stops`
+
 All stops on a bus's next upcoming trip.
 
 ```yaml
@@ -125,20 +149,22 @@ data:
   direction: "both"   # optional: both (default), inbound, outbound
 ```
 
-**Returns:** Complete journey with all stops, times, and GPS coordinates
+Returns the full journey with all stops, times, and GPS coordinates.
 
 ### `pyscript.bus_times_health_check`
-Verifies both API auth contexts are working.
+
+Verifies both API auth contexts the integration uses are reachable. Useful for diagnosing setup issues.
 
 ```yaml
 service: pyscript.bus_times_health_check
 ```
 
-**Returns:** Status flags for route auth, stop auth, options API, and stop-timetable API
+Returns status flags for route auth, stop auth, the options API, and the stop-timetable API.
 
-## 🏠 Home Assistant Automations
+## Example automation
 
-### Morning Commute Reminder
+Morning commute reminder — checks every minute between 07:15 and 08:30, notifies your phone when it's time to leave for the 414:
+
 ```yaml
 automation:
   - alias: "Time to leave for the 414"
@@ -160,98 +186,65 @@ automation:
         then:
           - service: notify.mobile_app_your_phone
             data:
-              title: "🚌 Leave now!"
+              title: "Leave now!"
               message: >
                 414 to {{ check.headsign }} departs at {{ check.departure_time }}
                 ({{ check.minutes_until_bus }} min).
 ```
 
+## Finding stop codes
 
-## 🔍 Finding Stop Codes
+Stop codes are the numbers printed on the physical bus stop sign. You can also look them up on the [Transperth website](https://www.transperth.wa.gov.au) — click any stop in the journey planner to see its code.
 
-Stop codes are the numbers on the physical bus stop sign. You can also find them on the [Transperth website](https://www.transperth.wa.gov.au) — click any stop on the journey planner to see its code.
+## Troubleshooting
 
-## 🛠️ Troubleshooting
+**Services don't appear in Developer Tools.**
+Check PyScript is connected: **Settings** → **Devices & Services**. Confirm the file is at `config/pyscript/bus_times.py`. Call `pyscript.reload`. If still missing, check **Settings** → **System** → **Logs** for `pyscript` errors.
 
-### Services Not Appearing
-- **Check PyScript is running:** Settings → Devices & Services → PyScript should show "Connected"
-- **Check the file location:** Must be in `config/pyscript/bus_times.py`
-- **Check logs:** Settings → System → Logs → Search for "pyscript"
-- **Reload PyScript:** Developer Tools → Services → `pyscript.reload`
+**No bus data returned.**
+Verify the bus number is just the route digits (`"414"`, not `"Bus 414"`). Verify the stop code exactly matches the sign. Call `pyscript.bus_times_health_check` to confirm the integration can reach Transperth.
 
-### No Bus Data Returned
-- **Check bus number:** Ensure it's a valid Transperth route (e.g., "950", "209", not "Bus950")
-- **Check stop code:** Must be the exact number from the stop sign
-- **Run health check:** Call `pyscript.bus_times_health_check` service
-- **API might be down:** Check if [transperth.wa.gov.au](https://www.transperth.wa.gov.au) is working
+**Wrong direction.**
+For `get_bus_stops`, set `direction: "both"` to let it auto-detect. Some routes only run one direction at certain times.
 
-### Wrong Direction Data
-- Try setting `direction: "both"` to automatically detect the correct direction
-- Some routes only run in one direction at certain times
+**Works once, then errors (rate limiting).**
+Responses include `rate_limited: true` and an HTTP 429 message. The Transperth cooldown is well over a minute and is shared with the Transperth website itself, so browsing the timetable while automations run can contribute. Reduce automation frequency to a few calls per minute at most.
 
-### Works First Time, Fails After (Rate Limiting)
-If a service works the first time but then returns errors (or the Transperth website shows "Uh-oh, something broke"), you've hit Transperth's rate limit.
+## For developers
 
-- Responses will include `rate_limited: true` and an error mentioning HTTP 429
-- **Wait a few minutes** before retrying — the cooldown can last well over a minute
-- **Reduce automation frequency** — don't call these services more than a few times per minute
-- The rate limiter is shared with the Transperth website, so browsing the timetable while automations run can contribute
+### Project layout
 
-
-## 📚 References
-
-- **PyScript Documentation:** [hacs-pyscript.readthedocs.io](https://hacs-pyscript.readthedocs.io/)
-- **PyScript GitHub:** [github.com/custom-components/pyscript](https://github.com/custom-components/pyscript)
-- **Transperth Website:** [transperth.wa.gov.au](https://www.transperth.wa.gov.au)
-- **Home Assistant Services:** [home-assistant.io/docs/scripts/service-calls](https://www.home-assistant.io/docs/scripts/service-calls/)
-- **HACS Documentation:** [hacs.xyz](https://hacs.xyz/)
-- **API Overview:** [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) - What endpoints we use and why
-- **API Reference:** [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - Full request/response details
-
-## 🔧 For Developers
-
-### Project Structure
 ```
 transperth-bus-times/
-├── src/
-│   └── bus_times.py         # The PyScript service (copy this to HA)
-├── tests/                   # API contract tests — catch Transperth API changes
-├── docs/                    # API documentation and reference
-├── pyproject.toml           # Pytest configuration
-└── requirements-dev.txt     # Testing dependencies
+├── src/bus_times.py        # The PyScript service — this is what gets deployed
+├── tests/                  # Contract tests against the live Transperth API
+├── docs/                   # API documentation and full endpoint reference
+├── pyproject.toml          # Pytest configuration
+└── requirements-dev.txt    # Test dependencies
 ```
 
-### Running the API contract tests
-These tests hit the live Transperth API to verify the response schemas our code depends on. Run them after any Transperth service change or before releasing an update.
+### Running the tests
+
+The tests hit the **live** Transperth API to catch schema drift. Don't run them in tight loops — the 429 cooldown is sticky.
 
 ```bash
 pip install -r requirements-dev.txt
 pytest tests/ -n auto
 ```
-The `-n auto` flag runs tests in parallel. If you see a failure, the Transperth API has probably changed and the affected service will be broken.
 
-### How It Works
-The service uses Transperth's public website API. It:
-1. Obtains CSRF tokens from two public pages (route timetable page + stop page); each page issues tokens scoped to a different API surface.
-2. Calls `GetStopTimetableAsync` for stop-centric queries (one HTTP request returns all upcoming buses at a stop).
-3. Calls `GetTimetableOptionsAsync` + `GetTimetableTripAsync` for the route-centric `get_bus_stops` service.
-4. Handles HTTP 429 rate limiting explicitly with a `rate_limited: true` flag in responses.
+A failure usually means Transperth changed their response shape and the affected service is broken in production.
 
-See [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) for the overview or [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for full endpoint details.
+### How it works
 
-## 📝 Version History
+Transperth has no public API. The integration scrapes CSRF tokens from two public pages (the route timetable page and the stop page — each page issues tokens scoped to a different API surface), then calls the same internal endpoints Transperth's own website uses:
 
-- **2.0.0** — Rewrite: 6 user-friendly services (`get_next_bus`, `get_leave_time`, `get_bus_countdown`, `get_stop_departures`, `get_bus_schedule`, `get_bus_stops`), switched to stop-centric API, added `at` parameter for looking ahead, fixed silent 429 failure mode
+- `GetStopTimetableAsync` — one request returns all upcoming buses at a stop. Used by five of the six services.
+- `GetTimetableOptionsAsync` + `GetTimetableTripAsync` — route-centric pair used by `get_bus_stops`.
 
-## ⚖️ Disclaimer
+HTTP 429 rate limits are caught explicitly and surfaced via `rate_limited: true` so callers can back off.
 
-This is an unofficial integration that uses Transperth's public website API. It may stop working at any time if Transperth changes their website. Don't hammer the API — be respectful of their infrastructure.
+See [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) for the architecture overview and [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for full request/response details.
 
-## 💬 Support
+## Disclaimer
 
-- **Discussions:** [Home Assistant Community](https://community.home-assistant.io/)
-- **PyScript Help:** [PyScript Discord](https://discord.gg/ND4emRS)
-
-## 🙏 Acknowledgments
-
-Thanks to the PyScript developers for making Python automations possible in Home Assistant.
+Unofficial. Uses Transperth's public website API, which can change or stop working without notice. Be respectful of their infrastructure — don't hammer it.
