@@ -8,6 +8,14 @@ __pycache__/
 
 # Tooling caches
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging
+*.egg-info/
+build/
+dist/
 
 # IDEs
 .vscode/
